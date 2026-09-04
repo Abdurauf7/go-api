@@ -41,6 +41,18 @@ func InitDB() {
 }
 
 func createTables() {
+
+	createUsersTable := `
+	CREATE TABLE IF NOT EXISTS users(
+		id SERIAL PRIMARY KEY,
+		username VARCHAR(255) NOT NULL UNIQUE,
+		password TEXT NOT NULL
+	)`
+
+	if _, err := DB.Exec(createUsersTable); err != nil {
+		log.Fatal("Не удалось создать таблицу users: ", err)
+	}
+
 	createEventsTable := `
 	CREATE TABLE IF NOT EXISTS events (
 		id          SERIAL PRIMARY KEY,
@@ -48,7 +60,7 @@ func createTables() {
 		description TEXT NOT NULL,
 		location    TEXT NOT NULL,
 		datetime    TIMESTAMPTZ NOT NULL,
-		user_id     INTEGER NOT NULL
+		user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE
 	)`
 
 	if _, err := DB.Exec(createEventsTable); err != nil {
