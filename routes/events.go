@@ -26,7 +26,8 @@ func createEvent(context *gin.Context) {
 		return
 	}
 
-	event.UserId = 1 // позже возьмём из аутентификации
+	user_id := context.GetInt64("user_id")
+	event.UserId = user_id
 
 	if err := event.Save(); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "could not create event"})
@@ -68,10 +69,16 @@ func updateEventById(context *gin.Context) {
 		return
 	}
 
+	user_id := context.GetInt64("user_id")
 	existingEvent, err := models.GetEventById(eventId)
 
 	if errors.Is(err, models.ErrEventNotFound) {
 		context.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+
+	if existingEvent.UserId != user_id {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Not authorized to update event "})
 		return
 	}
 
@@ -108,8 +115,15 @@ func deleteEventById(context *gin.Context) {
 
 	event, err := models.GetEventById(eventId)
 
+	user_id := context.GetInt64("user_id")
+
 	if errors.Is(err, models.ErrEventNotFound) {
 		context.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+
+	if event.UserId != user_id {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Not authorized to update event "})
 		return
 	}
 

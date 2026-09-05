@@ -60,10 +60,21 @@ func createTables() {
 		description TEXT NOT NULL,
 		location    TEXT NOT NULL,
 		datetime    TIMESTAMPTZ NOT NULL,
-		user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE
+		user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 	)`
 
 	if _, err := DB.Exec(createEventsTable); err != nil {
 		log.Fatal("Не удалось создать таблицу events: ", err)
+	}
+
+	createRegistrationTable := `
+	CREATE TABLE IF NOT EXISTS registrations(
+		id  SERIAL PRIMARY KEY, 
+		event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		UNIQUE (event_id, user_id)
+	)`
+	if _, err := DB.Exec(createRegistrationTable); err != nil {
+		log.Fatal("Не удалось создать таблицу registrations: ", err)
 	}
 }

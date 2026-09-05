@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"errors"
 
 	"api.com/api/db"
@@ -10,6 +11,9 @@ import (
 
 // ErrUserExists возвращается, когда username уже занят.
 var ErrUserExists = errors.New("user already exists")
+
+// ErrInvalidCredentials возвращается, когда username не найден или пароль неверный.
+var ErrInvalidCredentials = errors.New("invalid credentials")
 
 // uniqueViolation — код ошибки Postgres при нарушении UNIQUE-ограничения.
 const uniqueViolation = "23505"
@@ -65,4 +69,25 @@ func GetAllUsers() ([]User, error) {
 
 	return users, rows.Err()
 
+}
+
+func (u *User) ValidateCredentials() error {
+	query := `SELECT id, password FROM users WHERE username = $1`
+
+	var storedPassword string
+	err := db.DB.QueryRow(query, u.Username).Scan(&u.ID, &storedPassword)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrInvalidCredentials
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(u.Password)); err != nil {
+		return ErrInvalidCredentials
+	}
+
+	return nil
 }

@@ -12,12 +12,13 @@ import (
 var ErrEventNotFound = errors.New("event not found")
 
 type Event struct {
-	ID          int64
-	Name        string    `binding:"required"`
-	Description string    `binding:"required"`
-	Location    string    `binding:"required"`
-	DateTime    time.Time `binding:"required"`
-	UserId      int64
+	ID          int64     `json:"id"`
+	Name        string    `json:"name" binding:"required"`
+	Description string    `json:"description" binding:"required"`
+	Location    string    `json:"location" binding:"required"`
+	DateTime    time.Time `json:"date_time" binding:"required"`
+	UserId      int64     `json:"user_id"`
+	UserName    string    `json:"user_name"`
 }
 
 // Save записывает событие в БД и проставляет сгенерированный id.
@@ -31,7 +32,7 @@ func (e *Event) Save() error {
 }
 
 func GetAllEvents() ([]Event, error) {
-	query := `SELECT id, name, description, location, datetime, user_id FROM events ORDER BY id ASC`
+	query := `SELECT e.*, u.username FROM events AS e JOIN users AS u ON e.user_id = u.id  ORDER BY e.id ASC`
 
 	rows, err := db.DB.Query(query)
 	if err != nil {
@@ -42,7 +43,7 @@ func GetAllEvents() ([]Event, error) {
 	events := []Event{}
 	for rows.Next() {
 		var e Event
-		err := rows.Scan(&e.ID, &e.Name, &e.Description, &e.Location, &e.DateTime, &e.UserId)
+		err := rows.Scan(&e.ID, &e.Name, &e.Description, &e.Location, &e.DateTime, &e.UserId, &e.UserName)
 		if err != nil {
 			return nil, err
 		}
@@ -82,5 +83,18 @@ func (e *Event) Update() error {
 func (e *Event) Delete() error {
 	query := `DELETE FROM events WHERE id = $1`
 	_, err := db.DB.Exec(query, e.ID)
+	return err
+}
+
+func (e *Event) Register(user_id int64) error {
+	query := "INSERT INTO registrations (event_id,user_id) VALUES($1,$2)"
+	_, err := db.DB.Exec(query, e.ID, user_id)
+	return err
+}
+
+func (e *Event) CancelRegister(user_id int64) error {
+	query := "DELETE FROM registrations WHERE event_id = $1 AND user_id = $2"
+
+	_, err := db.DB.Exec(query, e.ID, user_id)
 	return err
 }
